@@ -5,47 +5,30 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from datetime import datetime
 import sys
-import csv
 from matplotlib.dates import DateFormatter
 from matplotlib.dates import DayLocator
+from typing import Tuple, List, Dict, Union
+from helpers import *
 
 
-sample_percentage = float(sys.argv[1])
-measurement_name = str(sys.argv[2])
+# Arguments passed via command line 
+sample_percentage: float = float(sys.argv[1])
+measurement_name: str = str(sys.argv[2])
 
-wikipedia_file_suffix = '.wikipedia-on-ipfs.org_links_1_CID.csv'
+def evaluate_data(language: str, sample_size: int) -> Tuple[List[datetime], List[float]]:
+    """
+    Read data from CSV files and evaluate.
 
-languages = [('en', 'English', 'darkred'),
-            ('ru', 'Russian', 'darkblue'),
-            ('uk', 'Ukrainian', 'blue'),
-            ('tr', 'Turkish', 'red'),
-            ('ar', 'Arabic', 'yellow'),
-            ('zh', 'Chinese', 'black'),
-            ('my', 'Myanmar (Burmese)', 'teal'),
-            ('fa', 'Persian (Farsi)', 'orange')]
+    Args:
+        language: The language code string.
+        sample_size: The sample size to be considered.
 
-
-def count_rows_in_csv(file_path):
-    with open(file_path, 'r') as csvfile:
-        csvreader = csv.reader(csvfile)
-        
-        # Skip the header
-        next(csvreader)
-        row_count = sum(1 for row in csvreader)
-        # print(row_count)
-    return row_count
-
-# Function to parse timestamp from filename
-def parse_timestamp(filename):
-    basename = os.path.basename(filename)
-    timestamp_str = re.search(r"\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2}", basename).group()
-    # print(timestamp_str)
-    return datetime.strptime(timestamp_str, "%Y-%m-%d_%H-%M-%S")
-
-def evaluate_data(language, sample_size):
+    Returns:
+        Two lists - list of timestamps and corresponding availability ratios.
+    """
     # Read CSV files and store their data in a list of dictionaries
-    data = []
-    pattern = r"\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2}_cleaned\.csv$"
+    data: List[Dict[str, Union[datetime, float]]] = []
+    pattern: str = r"\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2}_cleaned\.csv$"
     for file in glob.glob(f"./data/{language}/{sample_size}_{measurement_name}/CID/*.csv"):
         if re.match(pattern, os.path.basename(file)):
             df = pd.read_csv(file)
@@ -73,9 +56,9 @@ def evaluate_data(language, sample_size):
     return timestamps, availability_ratio
 
 # Process and plot the data
-sampled_data = {}
+sampled_data: Dict[str, pd.DataFrame] = {}
 for lang, _, _ in languages:
-    timestamps, availability_ratio = evaluate_data(lang, int(count_rows_in_csv('links/' + lang + str(wikipedia_file_suffix)) * sample_percentage))
+    timestamps, availability_ratio = evaluate_data(lang, int(count_rows_in_csv('links/' + lang + wikipedia_file_suffix) * sample_percentage))
     df = pd.DataFrame({'timestamp': timestamps, 'availability_ratio': availability_ratio})
     df.set_index('timestamp', inplace=True)
 

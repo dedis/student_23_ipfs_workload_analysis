@@ -12,7 +12,7 @@ while true; do
     curl http://127.0.0.1:8432/metric_plugin/v1/sample_peer_metadata >connected_peers/docker_compose_monitor_01/$TIMESTAMP.txt
     echo "Success: The file has been created with timestamp $TIMESTAMP for docker_compose_monitor_01"
 
-    curl http://127.0.0.1:8432/metric_plugin/v1/sample_peer_metadata >connected_peers/docker_compose_monitor_02/$TIMESTAMP.txt
+    curl http://127.0.0.1:8433/metric_plugin/v1/sample_peer_metadata >connected_peers/docker_compose_monitor_02/$TIMESTAMP.txt
     echo "Success: The file has been created with timestamp $TIMESTAMP for docker_compose_monitor_02"
 
     # Sleep for 60 minutes

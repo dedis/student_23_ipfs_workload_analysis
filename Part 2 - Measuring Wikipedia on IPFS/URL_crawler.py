@@ -2,8 +2,20 @@ import sys
 import requests
 from bs4 import BeautifulSoup
 from urllib.parse import urlparse, urljoin, unquote
+from typing import Set
 
-def get_links_recursive(url, depth, max_depth, visited, output_file, original_domain):
+def get_links_recursive(url: str, depth: int, max_depth: int, visited: Set[str], output_file: str, original_domain: str) -> None:
+    """
+    Recursively scrapes all links on a webpage and saves them to a file.
+    
+    Parameters:
+    - url: The URL of the webpage to scrape.
+    - depth: The current depth of the recursion.
+    - max_depth: The maximum depth of recursion.
+    - visited: A set of URLs that have already been visited.
+    - output_file: The filename of the file to save the links to.
+    - original_domain: The domain of the original webpage.
+    """
     if depth > max_depth or url in visited:
         return
 
@@ -24,10 +36,7 @@ def get_links_recursive(url, depth, max_depth, visited, output_file, original_do
     if content_text_div is not None:
         for link in content_text_div.find_all('a'):
             href = link.get('href')
-            # print(href)
             if href is not None and ('../' in href or '%' in href or '/wiki/' in href):
-                # if depth == 1:
-                    # print(href)
                 href = href.replace('../A/', '/wiki/', 1)
                 href = href.replace('../', '/wiki/', 1)
                 if '/wiki/#' in href:
@@ -35,10 +44,6 @@ def get_links_recursive(url, depth, max_depth, visited, output_file, original_do
                 if '#' in href:
                     href = href[:href.index('#')]
                 full_url = urljoin(url, href)
-                # if depth == 1:
-                    # print(href)
-                # if depth == 1:
-                    # print(full_url)
                 link_domain = urlparse(full_url).netloc
                 if link_domain == original_domain:
                     links.add(unquote(full_url.replace('https://', '', 1)))
@@ -52,20 +57,19 @@ def get_links_recursive(url, depth, max_depth, visited, output_file, original_do
 
 if __name__ == "__main__":
     # Get website URL and recursion depth from command line arguments
-    url = sys.argv[1]
-    recursion_depth = int(sys.argv[2]) if len(sys.argv) > 2 else 0
+    url: str = sys.argv[1]
+    recursion_depth: int = int(sys.argv[2]) if len(sys.argv) > 2 else 0
 
     # Extract domain name from URL
-    domain = urlparse(url).netloc
-    filename = f"{domain}_links_{recursion_depth}.txt"
+    domain: str = urlparse(url).netloc
+    filename: str = f"{domain}_links_{recursion_depth}.txt"
 
     # Clear or create the output file
     with open(filename, 'w') as file:
         pass
 
-
     # Perform recursive link scraping
-    visited = set()
+    visited: Set[str] = set()
     get_links_recursive(url, 0, recursion_depth, visited, filename, domain)
 
     print(f"All unique links on {url} have been saved to {filename}.")

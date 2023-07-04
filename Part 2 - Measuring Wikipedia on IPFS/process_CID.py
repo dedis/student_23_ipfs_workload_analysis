@@ -1,46 +1,57 @@
-import csv
-import re
-import subprocess
 from collections import defaultdict
 from concurrent.futures import ThreadPoolExecutor
-import sys
-import random
-import os
-from tqdm import tqdm
+from typing import Dict, List, Optional, Tuple, Union
+import csv
 import datetime
+import os
+import random
+import re
+import subprocess
+import sys
 import time
-import requests
-from bs4 import BeautifulSoup
 
-input_filename = str(sys.argv[1])
-sample_size = int(sys.argv[2])
-measurement_name = str(sys.argv[3])
-random_seed = int(sys.argv[4])
+from bs4 import BeautifulSoup
+from tqdm import tqdm
+import requests
+
+# Get the file names and parameters from the command line arguments
+input_filename: str = str(sys.argv[1])
+sample_size: int = int(sys.argv[2])
+measurement_name: str = str(sys.argv[3])
+random_seed: int = int(sys.argv[4])
 random.seed(random_seed)
 
-now = datetime.datetime.now()
-date_string = now.strftime('%Y-%m-%d_%H-%M-%S')
+now: datetime.datetime = datetime.datetime.now()
+date_string: str = now.strftime('%Y-%m-%d_%H-%M-%S')
 
-folder = f"./data/{input_filename[:4]}/{sample_size}_{measurement_name}"
-folder_CID = f"{folder}/CID"
-folder_Providers = f"{folder}/Providers"
+folder: str = f"./data/{input_filename[:4]}/{sample_size}_{measurement_name}"
+folder_CID = os.path.join(folder, "CID")
+folder_Providers = os.path.join(folder, "Providers")
 
-if not os.path.exists(folder):
-    os.mkdir(folder)
+# Make sure the necessary directories exist
+os.makedirs(folder, exist_ok=True)
+os.makedirs(folder_CID, exist_ok=True)
+os.makedirs(folder_Providers, exist_ok=True)
 
-if not os.path.exists(folder_CID):
-    os.mkdir(folder_CID)
-
-if not os.path.exists(folder_Providers):
-    os.mkdir(folder_Providers)
-
-output1_filename = f"{folder_CID}/{date_string}.csv"
-output2_filename = f"{folder_Providers}/{date_string}.csv"
+output1_filename: str = f"{folder_CID}/{date_string}.csv"
+output2_filename: str = f"{folder_Providers}/{date_string}.csv"
 
 # Create a dictionary to keep track of the number of appearances of each provider ID
-provider_counts = defaultdict(int)
+provider_counts: Dict[str, int] = defaultdict(int)
 
-def get_provider_information(provider, max_attempts=3):
+def get_provider_information(provider: str, max_attempts: int = 3) -> Tuple[bool, Optional[str]]:
+    """
+    Try to find the IP address of the provider using the `ipfs dht findpeer` command.
+    Retry if the provider is not reachable, up to `max_attempts` times.
+
+    Parameters:
+    - provider: a string that represents the provider's ID.
+    - max_attempts: the maximum number of attempts to reach the provider.
+
+    Returns:
+    - A tuple, where the first element is a boolean that represents whether the provider is reachable, 
+      and the second element is the IP address of the provider if it is reachable, and `None` otherwise.
+    """
     output = ''
     for attempt in range(max_attempts):
         sleep_time = random.uniform(0, 5)
@@ -68,38 +79,22 @@ def get_provider_information(provider, max_attempts=3):
     print(output)
     return False, None
 
-# def process_row(row, max_attempts=2):
-#     original_link, resolved_cid = row
-#     for attempt in range(max_attempts):
-#         sleep_time = random.uniform(0, 5)
-#         time.sleep(sleep_time)
-#         try:
-#             result = subprocess.run(f"ipfs dht findprovs {resolved_cid}", shell=True, capture_output=True, text=True, timeout=15)
-#             output = result.stdout.strip().split("\n")
-#         except subprocess.TimeoutExpired as e:
-#             if e.stdout is not None:
-#                 output = e.stdout.decode().strip().split("\n")
-#             else:
-#                 continue
-#         except subprocess.CalledProcessError as e:
-#             print(f"Command failed with return code {e.returncode}: {e.output}")
-#             print(f"Error on: ipfs dht findprovs {resolved_cid}")
-#             continue
+def process_row(row: Tuple[str, str], max_attempts: int = 2) -> List[Union[str, bool, int]]:
+    """
+    Process a single row from the input CSV file. This involves the following steps:
+    - Check if the website is reachable.
+    - Find the providers of the resolved CID using the `ipfs dht findprovs` command.
+    - Count the number of providers and keep track of their appearances.
 
-#         filtered_output = (item for item in output if item)  # Change to a generator expression
-#         if not filtered_output:
-#             continue
+    Parameters:
+    - row: a tuple that represents a single row from the input CSV file, containing the original link and the resolved CID.
+    - max_attempts: the maximum number of attempts to reach the website and find the providers of the resolved CID.
 
-#         providers = [p.split("/")[-1] for p in filtered_output]
-
-#         if len(providers) > 0:
-#             for p in providers:
-#                 provider_counts[p] += 1
-#             return [original_link, resolved_cid, len(providers), ",".join(providers), 1]
-
-#     return [original_link, resolved_cid, 0, '', 0]
-
-def process_row(row, max_attempts=2):
+    Returns:
+    - A list that represents the processed row, which includes the original link, the resolved CID, a boolean that 
+      indicates whether the website is reachable, the number of providers, a string that contains the list of providers, 
+      and a flag that indicates whether there are providers in the IPFS network.
+    """
     original_link, resolved_cid = row
     link = f'https://{original_link}'
     # print(original_link)
@@ -118,7 +113,7 @@ def process_row(row, max_attempts=2):
                 # print(f'Weird error when accessing {link}...')
                 print(f'RequestException: {e}')
 
-    if website_reachable == False:
+    if not website_reachable:
         print(f'{link} does not load')
 
     for attempt in range(max_attempts):
@@ -151,7 +146,9 @@ def process_row(row, max_attempts=2):
 
     return [original_link, resolved_cid, website_reachable, 0, '', 0]
 
-# Open the input CSV file and create the output1 CSV file
+# At this point in the script, the input CSV file is opened and processed row by row in parallel.
+# The processed rows are written to the output1 CSV file.
+# The number of articles available in the IPFS network and the number of reachable articles are counted and printed.
 with open(f"./links/{input_filename}", "r") as input_file, open(output1_filename, "w", newline="") as output1_file:
     # Set up the CSV reader and writer objects
     input_reader = csv.reader(input_file)
@@ -180,13 +177,13 @@ with open(f"./links/{input_filename}", "r") as input_file, open(output1_filename
             if row[2]:
                 reachable_articles += 1
             output1_writer.writerow(row[:-1])
-            # if (row[-1] > 0):
-                # print(row[:-1])
 
 print(f"{articles_available_in_IPFS} out of {num_rows} articles had providers in IPFS...")
 print(f"{reachable_articles} out of {num_rows} articles were reachable on the website...")
 
-# Create the output2 CSV file
+# At this point in the script, the output2 CSV file is created, and the provider information is processed in parallel.
+# The provider information includes the provider ID, the number of appearances of the provider, 
+# whether the provider is reachable, and the IP address of the provider.
 with open(output2_filename, "w", newline="") as output2_file:
     # Set up the CSV writer object
     output2_writer = csv.writer(output2_file)

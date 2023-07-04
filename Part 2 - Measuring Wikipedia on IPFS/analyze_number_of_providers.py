@@ -2,31 +2,35 @@ import os
 import glob
 import re
 import pandas as pd
-import matplotlib.pyplot as plt
 from datetime import datetime
 import sys
-import csv
+from typing import Tuple, List, Dict, Union
+from helpers import *
+import matplotlib.pyplot as plt
 from matplotlib.ticker import MaxNLocator
 import matplotlib.ticker as ticker
 from matplotlib.dates import DateFormatter
 from matplotlib.dates import DayLocator
 
 
-sample_percentage = float(sys.argv[1])
-measurement_name = str(sys.argv[2])
+# Arguments passed via command line 
+sample_percentage: float = float(sys.argv[1])
+measurement_name: str = str(sys.argv[2])
 
-wikipedia_file_suffix = '.wikipedia-on-ipfs.org_links_1_CID.csv'
+def evaluate_data(language: str, sample_size: int) -> Tuple[List[datetime], List[float]]:
+    """
+    Read data from CSV files and evaluate.
 
-def count_rows_in_csv(file_path):
-    with open(file_path, 'r') as csvfile:
-        csvreader = csv.reader(csvfile)
-        next(csvreader)
-        row_count = sum(1 for row in csvreader)
-    return row_count
+    Args:
+        language: The language code string.
+        sample_size: The sample size to be considered.
 
-def evaluate_data(language, sample_size):
-    data = []
-    pattern = r"\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2}\.csv$"
+    Returns:
+        Two lists - list of timestamps and corresponding reachability averages.
+    """
+    # Read CSV files and store their data in a list of dictionaries
+    data: List[Dict[str, Union[datetime, int]]] = []
+    pattern: str = r"\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2}\.csv$"
     for file in glob.glob(f"./data/{language}/{sample_size}_{measurement_name}/Providers/*.csv"):
         if re.match(pattern, os.path.basename(file)):
             df = pd.read_csv(file)
@@ -34,7 +38,8 @@ def evaluate_data(language, sample_size):
             total = len(df)
             reachable = len(df[df["Reachable"] == True])
             not_reachable = total - reachable
-            if reachable != 0: 
+            
+            if reachable != 0:
                 data.append({"timestamp": timestamp, "total": total, "reachable": reachable, "not_reachable": not_reachable})
 
     data.sort(key=lambda x: x["timestamp"])
@@ -46,20 +51,6 @@ def evaluate_data(language, sample_size):
     reachables_avg = reachables_df.rolling(window=10).mean().values.flatten().tolist()
 
     return timestamps, reachables_avg
-
-def parse_timestamp(filename):
-    basename = os.path.basename(filename)
-    timestamp_str = re.search(r"\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2}\.csv", basename).group()[:-4]
-    return datetime.strptime(timestamp_str, "%Y-%m-%d_%H-%M-%S")
-
-languages = [('en', 'English', 'darkred'),
-            ('ru', 'Russian', 'darkblue'),
-            ('uk', 'Ukrainian', 'blue'),
-            ('tr', 'Turkish', 'red'),
-            ('ar', 'Arabic', 'yellow'),
-            ('zh', 'Chinese', 'black'),
-            ('my', 'Myanmar (Burmese)', 'teal'),
-            ('fa', 'Persian (Farsi)', 'orange')]
 
 full_data = {}
 sampled_data = {}
