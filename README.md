@@ -1,7 +1,11 @@
 # Monitoring and Workload characterization in IPFS
+
 See the report [report_Simon_Jacob_IPFS.pdf](report_Simon_Jacob_IPFS.pdf).
+
 The LaTeX source code is also available: [report_Simon_Jacob_IPFS.zip](report_Simon_Jacob_IPFS.zip).
+
 It is especially recommended to read the background section, as it contains a lot of useful explanations.
+
 For some ideas on future work, read the final chapter of the report.
 
 The slides from the final presentation are also available here: [slides_final_presentation_IPFS.pdf](slides_final_presentation_IPFS.pdf)
