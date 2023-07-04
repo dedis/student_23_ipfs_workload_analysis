@@ -15,15 +15,15 @@ We recommend a setup similar to the one below with `tmux`:
 
 - Two middle panes:
     - `docker exec -it ipfs-monitoring-daemon01-1 /bin/sh`.
-        - And running `watch -tn 30 'ipfs swarm peers | wc -l'` inside of the docker container to continously display the number of peers connected to monitor 1.
+        - `watch -tn 30 'ipfs swarm peers | wc -l'` inside of the docker container to continously display the number of peers connected to monitor 1.
     - `docker exec -it ipfs-monitoring-daemon02-1 /bin/sh`.
-        - And running `watch -tn 30 'ipfs swarm peers | wc -l'` inside of the docker container to continously display the number of peers connected to monitor 2.
+        - `watch -tn 30 'ipfs swarm peers | wc -l'` inside of the docker container to continously display the number of peers connected to monitor 2.
 
     Note that it will take some time (several days) until a decently large number of connected peers is reached.
 
 - Two bottom panes:
-    - [find_gateways.sh](find_gateways.sh): Script that uses the ipfs-gateway-finder binary to identify gateway peers.
-    - [save_connected_peers.sh](save_connected_peers.sh): Script that saves the connected peers for both monitors.
+    - [find_gateways.sh](find_gateways.sh): Script that uses the ipfs-gateway-finder binary to identify gateway peers. Runs every 12 hours.
+    - [save_connected_peers.sh](save_connected_peers.sh): Script that saves the connected peers for both monitors. Runs every 30 minutes.
 
 Three especially useful `tmux` shortcuts:
 - `Ctrl+b` + `n` to cycle through the panes.
@@ -61,7 +61,11 @@ The gateway peers that were found during our run are available in [gateway_peers
 
 ## Good To Know
 For our setup, we received access to a machine called `icvm0022.xaas.epfl.ch` with ports 4001 and 4002 forwarded (although only TCP traffic was allowed).
-It might also be interesting to repeat this experiment and use UDP.
+It might also be interesting to repeat this experiment and use UDP instead of TCP (it apparently is not that easy to get both TCP and UDP port forwarding).
+The machine had 4 vCPUs and the hardware CPU was a Intel(R) Xeon(R) Gold 6242 CPU.
+We had 16 GB of RAM, which was enough.
+
+Over the course of approximately 8 days, the setup collected roughly 150 GB of compressed data - as our VM only had 60 GB of storage, it was necessary to log in every other day or so to copy the data to a local disk with `rsync` and delete old files, e.g. by running `find . -type f -mmin +120 -delete`.
 
 To increase the number of simultaneously possible TCP connections, we increased the `ulimit` systemwide:
 
